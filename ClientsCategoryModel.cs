@@ -156,7 +156,7 @@ namespace PLAYTRAK.ReportesFidelizacion.Models
                 }
 
                 List<string> listCodCategory = codCategory?.Split(',').ToList();
-                List<string> listCodTypeCredit = codTypeCredit?.Split(',').ToList() ?? new List<string> { "S", "M" };
+                List<string> listCodTypeCredit = codTypeCredit?.Split(',').ToList();
                 List<char> listEstado = new List<char> { 'F', 'P', 'U', 'C' };
                 using (UnitOfWork uow = XPOFunction.GetNewUnitOfWork(Logger.Logger.GetLog4netGlobal()))
                 {
@@ -170,7 +170,7 @@ namespace PLAYTRAK.ReportesFidelizacion.Models
                          where fcsm.PartidasJugadas > 0 && listEstado.Contains(fcsm.Estado.CodEstado) && (idClient == null || fcsm.IDCliente.IDCliente == idClient)
                            && (fcsm.FechaFacturacion >= startDate && fcsm.FechaFacturacion <= endDate)
                            && (listCodCategory == null || listCodCategory.Contains(fcsm.IDCliente.CodTipoCliente.CodTipoCliente.ToString()))
-                           && (listCodTypeCredit.Contains("S"))
+                           && (listCodTypeCredit == null || listCodTypeCredit.Contains("S"))
                          orderby fcsm.FechaFacturacion descending
                          select new
                          {
@@ -283,7 +283,7 @@ namespace PLAYTRAK.ReportesFidelizacion.Models
                               where fcsm.PartidasJugadas != null && listEstado.Contains(fcsm.Estado.CodEstado) && (idClient == null || fcsm.IDCliente.IDCliente == idClient)
                                 && (fcsm.FechaFacturacion >= startDate && fcsm.FechaFacturacion <= endDate)
                                 && (listCodCategory == null || listCodCategory.Contains(fcsm.IDCliente.CodTipoCliente.CodTipoCliente.ToString()))
-                                && (listCodTypeCredit.Contains("M"))
+                                && (listCodTypeCredit == null || listCodTypeCredit.Contains("M"))
                               orderby fcsm.FechaFacturacion descending
                               select new
                               {
