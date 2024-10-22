@@ -156,246 +156,240 @@ namespace PLAYTRAK.ReportesFidelizacion.Models
                 }
 
                 List<string> listCodCategory = codCategory?.Split(',').ToList();
-                List<string> listCodTypeCredit = codTypeCredit?.Split(',').ToList();
+                List<string> listCodTypeCredit = codTypeCredit?.Split(',').ToList() ?? new List<string> { "S", "M" };
                 List<char> listEstado = new List<char> { 'F', 'P', 'U', 'C' };
                 using (UnitOfWork uow = XPOFunction.GetNewUnitOfWork(Logger.Logger.GetLog4netGlobal()))
                 {
 
                     List<ClientsCategoryModel> listClientsCategory = new List<ClientsCategoryModel>();
                     List<ClientsCategoryModel> listClientsCategoryReturn;
-                  
-                        var machineClientSessions = (
-                            from fcsm in XPOFunction.XPQueryCatched<FIDEL_ClienteSesionMaquina>(uow, Logger.Logger.GetLog4netGlobal())
-                            join fcd in XPOFunction.XPQueryCatched<FIDEL_CLIENTE_Datos>(uow, Logger.Logger.GetLog4netGlobal()) on fcsm.IDCliente.IDCliente equals fcd.IDCliente
-                            join fcs in XPOFunction.XPQueryCatched<FIDEL_CLIENTE_Saldo>(uow, Logger.Logger.GetLog4netGlobal()) on fcd.IDCliente equals fcs.IDCliente
-                            let isValidClient = idClient == null || fcsm.IDCliente.IDCliente == idClient
-                            let isWithinDateRange = fcsm.FechaFacturacion >= startDate && fcsm.FechaFacturacion <= endDate
-                            let isValidCategory = listCodCategory == null || listCodCategory.Contains(fcsm.IDCliente.CodTipoCliente.CodTipoCliente.ToString())
-                            where fcsm.PartidasJugadas > 0
-                                && listEstado.Contains(fcsm.Estado.CodEstado)
-                                && isValidClient
-                                && isWithinDateRange
-                                && isValidCategory
-                            orderby fcsm.FechaFacturacion descending
-                            select new
-                            {
-                                IdClient = fcd.IDCliente,
-                                DateBilling = fcsm.FechaFacturacion,
-                                TotalTimeSesion = System.Data.Linq.SqlClient.SqlMethods.DateDiffMinute(fcsm.FechaHoraInicio, fcsm.FechaHoraFin.Value),
-                                TotalBet = fcsm.Apostado,
-                                TotalPoints = fcsm.PuntosFidelSumados,
-                                TotalWin = fcsm.Ganado,
-                                TotalJackpot = fcsm.Jackpots,
-                                TotalNetWin = fcsm.Apostado - (fcsm.Ganado + fcsm.Jackpots),
-                                BusinessLine = "Slot",
-                                BusinessLineId = fcsm.IDMaquina.IDMaquina,
-                                Visit = 1,
-                                ClientTotalPoints = fcs.SaldoFidel,
-                                Client = string.Format("{0} {1} {2}", fcd.ApellidoPaterno, fcd.ApellidoMaterno, fcd.Nombre),
-                                Phone = fcd.TelefonoPrincipal,
-                                Movil = fcd.TelefonoCelular,
-                                Email = fcd.Email,
-                                DateAdmission = fcd.FechaHoraAlta,
-                                DateLastVisit = fcs.UltimaActualizacion,
-                                TypeClient = fcd.CodTipoCliente.Descripcion,
-                                CodTypeClient = fcd.CodTipoCliente.CodTipoCliente,
-                                Color = fcd.CodTipoCliente.ColorIdentificador
-                            }
-                        ).ToList();
-
+                    if (listCodTypeCredit.Contains("S"))
+                    {
+                        var machineClientSessions =
+                            (from fcsm in XPOFunction.XPQueryCatched<FIDEL_ClienteSesionMaquina>(uow, Logger.Logger.GetLog4netGlobal())
+                             join fcd in XPOFunction.XPQueryCatched<FIDEL_CLIENTE_Datos>(uow, Logger.Logger.GetLog4netGlobal()) on fcsm.IDCliente.IDCliente equals fcd.IDCliente
+                             join fcs in XPOFunction.XPQueryCatched<FIDEL_CLIENTE_Saldo>(uow, Logger.Logger.GetLog4netGlobal()) on fcd.IDCliente equals fcs.IDCliente
+                             where fcsm.PartidasJugadas > 0 && listEstado.Contains(fcsm.Estado.CodEstado) && (idClient == null || fcsm.IDCliente.IDCliente == idClient)
+                               && (fcsm.FechaFacturacion >= startDate && fcsm.FechaFacturacion <= endDate)
+                               && (listCodCategory == null || listCodCategory.Contains(fcsm.IDCliente.CodTipoCliente.CodTipoCliente.ToString()))
+                             orderby fcsm.FechaFacturacion descending
+                             select new
+                             {
+                                 IdClient = fcd.IDCliente,
+                                 DateBilling = fcsm.FechaFacturacion,
+                                 TotalTimeSesion = System.Data.Linq.SqlClient.SqlMethods.DateDiffMinute(fcsm.FechaHoraInicio, fcsm.FechaHoraFin.Value),
+                                 TotalBet = fcsm.Apostado,
+                                 TotalPoints = fcsm.PuntosFidelSumados,
+                                 TotalWin = fcsm.Ganado,
+                                 TotalJackpot = fcsm.Jackpots,
+                                 TotalNetWin = fcsm.Apostado - (fcsm.Ganado + fcsm.Jackpots),
+                                 BusinessLine = "Slot",
+                                 BusinessLineId = fcsm.IDMaquina.IDMaquina,
+                                 Visit = 1,
+                                 ClientTotalPoints = fcs.SaldoFidel,
+                                 Client = string.Format("{0} {1} {2}", fcd.ApellidoPaterno, fcd.ApellidoMaterno, fcd.Nombre),
+                                 Phone = fcd.TelefonoPrincipal,
+                                 Movil = fcd.TelefonoCelular,
+                                 Email = fcd.Email,
+                                 DateAdmission = fcd.FechaHoraAlta,
+                                 DateLastVisit = fcs.UltimaActualizacion,
+                                 TypeClient = fcd.CodTipoCliente.Descripcion,
+                                 CodTypeClient = fcd.CodTipoCliente.CodTipoCliente,
+                                 Color = fcd.CodTipoCliente.ColorIdentificador
+                             }).ToList();
                         machineClientSessions = (
-                            from mcs in machineClientSessions
-                            group mcs by new
-                            {
-                                mcs.IdClient,
-                                mcs.DateBilling
-                            } into item
-                            select new
-                            {
-                                IdClient = item.Key.IdClient,
-                                DateBilling = item.Key.DateBilling,
-                                TotalTimeSesion = item.Sum(x => x.TotalTimeSesion),
-                                TotalBet = item.Sum(x => x.TotalBet),
-                                TotalPoints = item.Sum(x => x.TotalPoints),
-                                TotalWin = item.Sum(x => x.TotalWin),
-                                TotalJackpot = item.Sum(x => x.TotalJackpot),
-                                TotalNetWin = item.Sum(x => x.TotalNetWin),
-                                BusinessLine = "Slot",
-                                BusinessLineId = item.Max(x => x.BusinessLineId),
-                                Visit = 1,
-                                ClientTotalPoints = item.FirstOrDefault().ClientTotalPoints,
-                                Client = item.FirstOrDefault().Client,
-                                Phone = item.FirstOrDefault().Phone,
-                                Movil = item.FirstOrDefault().Movil,
-                                Email = item.FirstOrDefault().Email,
-                                DateAdmission = item.FirstOrDefault().DateAdmission,
-                                DateLastVisit = item.FirstOrDefault().DateLastVisit,
-                                TypeClient = item.FirstOrDefault().TypeClient,
-                                CodTypeClient = item.FirstOrDefault().CodTypeClient,
-                                Color = item.FirstOrDefault().Color
-                            }
-                        ).ToList();
+                                 from mcs in machineClientSessions
+                                 group mcs by new
+                                 {
+                                     mcs.IdClient,
+                                     mcs.DateBilling
+                                 }
+                             into item
+                                 select new
+                                 {
+                                     IdClient = item.Key.IdClient,
+                                     DateBilling = item.Key.DateBilling,
+                                     TotalTimeSesion = item.Sum(x => x.TotalTimeSesion),
+                                     TotalBet = item.Sum(x => x.TotalBet),
+                                     TotalPoints = item.Sum(x => x.TotalPoints),
+                                     TotalWin = item.Sum(x => x.TotalWin),
+                                     TotalJackpot = item.Sum(x => x.TotalJackpot),
+                                     TotalNetWin = item.Sum(x => x.TotalNetWin),
+                                     BusinessLine = "Slot",
+                                     BusinessLineId = item.Max(x => x.BusinessLineId),
+                                     Visit = 1,
+                                     ClientTotalPoints = item.FirstOrDefault().ClientTotalPoints,
+                                     Client = item.FirstOrDefault().Client,
+                                     Phone = item.FirstOrDefault().Phone,
+                                     Movil = item.FirstOrDefault().Movil,
+                                     Email = item.FirstOrDefault().Email,
+                                     DateAdmission = item.FirstOrDefault().DateAdmission,
+                                     DateLastVisit = item.FirstOrDefault().DateLastVisit,
+                                     TypeClient = item.FirstOrDefault().TypeClient,
+                                     CodTypeClient = item.FirstOrDefault().CodTypeClient,
+                                     Color = item.FirstOrDefault().Color
+                                 }).ToList();
 
                         listClientsCategory.AddRange(
-                            from mcs in machineClientSessions
-                            group new { mcs } by new
-                            {
-                                mcs.ClientTotalPoints,
-                                mcs.IdClient,
-                                mcs.Client,
-                                mcs.Phone,
-                                mcs.Movil,
-                                mcs.Email,
-                                mcs.DateAdmission,
-                                mcs.DateLastVisit,
-                                mcs.TypeClient,
-                                mcs.CodTypeClient,
-                                mcs.Color,
-                                mcs.DateBilling,
-                                mcs.BusinessLineId
-                            } into groupClients
-                            select new ClientsCategoryModel
-                            {
-                                IdClient = groupClients.Key.IdClient,
-                                Client = groupClients.Key.Client,
-                                Phone = groupClients.Key.Phone,
-                                Movil = groupClients.Key.Movil,
-                                Email = groupClients.Key.Email,
-                                DateBilling = groupClients.Key.DateBilling,
-                                DateAdmission = groupClients.Key.DateAdmission,
-                                DateLastVisit = groupClients.Key.DateLastVisit,
-                                CodTypeClient = groupClients.Key.CodTypeClient,
-                                TypeClient = groupClients.Key.TypeClient,
-                                TotalTimeSesion = groupClients.Sum(x => x.mcs.TotalTimeSesion),
-                                TotalBet = groupClients.Sum(x => x.mcs.TotalBet),
-                                TotalPoints = groupClients.Sum(x => x.mcs.TotalPoints),
-                                TotalWin = groupClients.Sum(x => x.mcs.TotalWin),
-                                TotalJackpot = groupClients.Sum(x => x.mcs.TotalJackpot),
-                                TotalNetWin = groupClients.Sum(x => x.mcs.TotalNetWin),
-                                Color = groupClients.Key.Color,
-                                BusinessLine = "Slot",
-                                BusinessLineId = groupClients.Key.BusinessLineId,
-                                ClientFidelPoints = groupClients.Key.ClientTotalPoints,
-                                Visits = groupClients.Sum(x => x.mcs.Visit)
-                            }
-                        );
-
-                 
-                        var tableClientSessions = (
-                            from fcsm in XPOFunction.XPQueryCatched<FIDEL_ClienteSesionMesa>(uow, Logger.Logger.GetLog4netGlobal())
-                            join fcd in XPOFunction.XPQueryCatched<FIDEL_CLIENTE_Datos>(uow, Logger.Logger.GetLog4netGlobal()) on fcsm.IDCliente.IDCliente equals fcd.IDCliente
-                            join fcs in XPOFunction.XPQueryCatched<FIDEL_CLIENTE_Saldo>(uow, Logger.Logger.GetLog4netGlobal()) on fcd.IDCliente equals fcs.IDCliente
-                            let isValidClient = idClient == null || fcsm.IDCliente.IDCliente == idClient
-                            let isWithinDateRange = fcsm.FechaFacturacion >= startDate && fcsm.FechaFacturacion <= endDate
-                            let isValidCategory = listCodCategory == null || listCodCategory.Contains(fcsm.IDCliente.CodTipoCliente.CodTipoCliente.ToString())
-                            where fcsm.PartidasJugadas != null
-                                && listEstado.Contains(fcsm.Estado.CodEstado)
-                                && isValidClient
-                                && isWithinDateRange
-                                && isValidCategory
-                            orderby fcsm.FechaFacturacion descending
-                            select new
-                            {
-                                IdClient = fcd.IDCliente,
-                                DateBilling = fcsm.FechaFacturacion,
-                                TotalTimeSesion = System.Data.Linq.SqlClient.SqlMethods.DateDiffMinute(fcsm.FechaHoraInicio, fcsm.FechaHoraFin.Value),
-                                TotalBet = fcsm.Apostado,
-                                TotalPoints = fcsm.PuntosFidelSumados,
-                                TotalWin = fcsm.Ganado,
-                                TotalJackpot = fcsm.Jackpots,
-                                TotalNetWin = fcsm.Apostado - (fcsm.Ganado + fcsm.Jackpots),
-                                BusinessLine = "Table",
-                                BusinessLineId = fcsm.IDMesa.IDMesa,
-                                Visit = 1,
-                                ClientTotalPoints = fcs.SaldoFidel,
-                                Client = string.Format("{0} {1} {2}", fcd.ApellidoPaterno, fcd.ApellidoMaterno, fcd.Nombre),
-                                Phone = fcd.TelefonoPrincipal,
-                                Movil = fcd.TelefonoCelular,
-                                Email = fcd.Email,
-                                DateAdmission = fcd.FechaHoraAlta,
-                                DateLastVisit = fcs.UltimaActualizacion,
-                                TypeClient = fcd.CodTipoCliente.Descripcion,
-                                CodTypeClient = fcd.CodTipoCliente.CodTipoCliente,
-                                Color = fcd.CodTipoCliente.ColorIdentificador
-                            }
-                        ).OrderByDescending(o => o.DateBilling).ToList();
-
+                                  (
+                                   from mcs in machineClientSessions
+                                   group new { mcs } by new
+                                   {
+                                       ClientTotalPoints = mcs.ClientTotalPoints,
+                                       IdClient = mcs.IdClient,
+                                       Client = mcs.Client,
+                                       Phone = mcs.Phone,
+                                       Movil = mcs.Movil,
+                                       Email = mcs.Email,
+                                       DateAdmission = mcs.DateAdmission,
+                                       DateLastVisit = mcs.DateLastVisit,
+                                       TypeClient = mcs.TypeClient,
+                                       CodTypeClient = mcs.CodTypeClient,
+                                       Color = mcs.Color,
+                                       mcs.DateBilling,
+                                       mcs.BusinessLineId
+                                   }
+                                   into groupClients
+                                   select new ClientsCategoryModel
+                                   {
+                                       IdClient = groupClients.Key.IdClient,
+                                       Client = groupClients.Key.Client,
+                                       Phone = groupClients.Key.Phone,
+                                       Movil = groupClients.Key.Movil,
+                                       Email = groupClients.Key.Email,
+                                       DateBilling = groupClients.Key.DateBilling,
+                                       DateAdmission = groupClients.Key.DateAdmission,
+                                       DateLastVisit = groupClients.Key.DateLastVisit,
+                                       CodTypeClient = groupClients.Key.CodTypeClient,
+                                       TypeClient = groupClients.Key.TypeClient,
+                                       TotalTimeSesion = groupClients.Sum(x => x.mcs.TotalTimeSesion),
+                                       TotalBet = groupClients.Sum(x => x.mcs.TotalBet),
+                                       TotalPoints = groupClients.Sum(x => x.mcs.TotalPoints),
+                                       TotalWin = groupClients.Sum(x => x.mcs.TotalWin),
+                                       TotalJackpot = groupClients.Sum(x => x.mcs.TotalJackpot),
+                                       TotalNetWin = groupClients.Sum(x => x.mcs.TotalNetWin),
+                                       Color = groupClients.Key.Color,
+                                       BusinessLine = "Slot",
+                                       BusinessLineId = groupClients.Key.BusinessLineId,
+                                       ClientFidelPoints = groupClients.Key.ClientTotalPoints,
+                                       Visits = groupClients.Sum(x => x.mcs.Visit)
+                                   }
+                                  )
+                               );
+                    }
+                    if (listCodTypeCredit.Contains("M"))
+                    {
+                        var tableClientSessions =
+                             (from fcsm in XPOFunction.XPQueryCatched<FIDEL_ClienteSesionMesa>(uow, Logger.Logger.GetLog4netGlobal())
+                              join fcd in XPOFunction.XPQueryCatched<FIDEL_CLIENTE_Datos>(uow, Logger.Logger.GetLog4netGlobal()) on fcsm.IDCliente.IDCliente equals fcd.IDCliente
+                              join fcs in XPOFunction.XPQueryCatched<FIDEL_CLIENTE_Saldo>(uow, Logger.Logger.GetLog4netGlobal()) on fcd.IDCliente equals fcs.IDCliente
+                              where fcsm.PartidasJugadas != null && listEstado.Contains(fcsm.Estado.CodEstado) && (idClient == null || fcsm.IDCliente.IDCliente == idClient)
+                                && (fcsm.FechaFacturacion >= startDate && fcsm.FechaFacturacion <= endDate)
+                                && (listCodCategory == null || listCodCategory.Contains(fcsm.IDCliente.CodTipoCliente.CodTipoCliente.ToString()))
+                                orderby fcsm.FechaFacturacion descending
+                              select new
+                              {
+                                  IdClient = fcd.IDCliente,
+                                  DateBilling = fcsm.FechaFacturacion,
+                                  TotalTimeSesion = System.Data.Linq.SqlClient.SqlMethods.DateDiffMinute(fcsm.FechaHoraInicio, fcsm.FechaHoraFin.Value),
+                                  TotalBet = fcsm.Apostado,
+                                  TotalPoints = fcsm.PuntosFidelSumados,
+                                  TotalWin = fcsm.Ganado,
+                                  TotalJackpot = fcsm.Jackpots,
+                                  TotalNetWin = fcsm.Apostado - (fcsm.Ganado + fcsm.Jackpots),
+                                  BusinessLine = "Table",
+                                  BusinessLineId = fcsm.IDMesa.IDMesa,
+                                  Visit = 1,
+                                  ClientTotalPoints = fcs.SaldoFidel,
+                                  Client = string.Format("{0} {1} {2}", fcd.ApellidoPaterno, fcd.ApellidoMaterno, fcd.Nombre),
+                                  Phone = fcd.TelefonoPrincipal,
+                                  Movil = fcd.TelefonoCelular,
+                                  Email = fcd.Email,
+                                  DateAdmission = fcd.FechaHoraAlta,
+                                  DateLastVisit = fcs.UltimaActualizacion,
+                                  TypeClient = fcd.CodTipoCliente.Descripcion,
+                                  CodTypeClient = fcd.CodTipoCliente.CodTipoCliente,
+                                  Color = fcd.CodTipoCliente.ColorIdentificador
+                              }).OrderByDescending(o => o.DateBilling).ToList();
                         tableClientSessions = (
-                            from mcs in tableClientSessions
-                            group mcs by new
-                            {
-                                mcs.IdClient,
-                                mcs.DateBilling
-                            } into item
-                            select new
-                            {
-                                IdClient = item.Key.IdClient,
-                                DateBilling = item.Key.DateBilling,
-                                TotalTimeSesion = item.Sum(x => x.TotalTimeSesion),
-                                TotalBet = item.Sum(x => x.TotalBet),
-                                TotalPoints = item.Sum(x => x.TotalPoints),
-                                TotalWin = item.Sum(x => x.TotalWin),
-                                TotalJackpot = item.Sum(x => x.TotalJackpot),
-                                TotalNetWin = item.Sum(x => x.TotalNetWin),
-                                BusinessLine = "Table",
-                                BusinessLineId = item.FirstOrDefault().BusinessLineId,
-                                Visit = 1,
-                                ClientTotalPoints = item.FirstOrDefault().ClientTotalPoints,
-                                Client = item.FirstOrDefault().Client,
-                                Phone = item.FirstOrDefault().Phone,
-                                Movil = item.FirstOrDefault().Movil,
-                                Email = item.FirstOrDefault().Email,
-                                DateAdmission = item.FirstOrDefault().DateAdmission,
-                                DateLastVisit = item.FirstOrDefault().DateLastVisit,
-                                TypeClient = item.FirstOrDefault().TypeClient,
-                                CodTypeClient = item.FirstOrDefault().CodTypeClient,
-                                Color = item.FirstOrDefault().Color
-                            }
-                        ).OrderByDescending(o => o.DateBilling).ToList();
-
+                                from mcs in tableClientSessions
+                                group mcs by new
+                                {
+                                    mcs.IdClient,
+                                    mcs.DateBilling
+                                }
+                            into item
+                                select new
+                                {
+                                    IdClient = item.Key.IdClient,
+                                    DateBilling = item.Key.DateBilling,
+                                    TotalTimeSesion = item.Sum(x => x.TotalTimeSesion),
+                                    TotalBet = item.Sum(x => x.TotalBet),
+                                    TotalPoints = item.Sum(x => x.TotalPoints),
+                                    TotalWin = item.Sum(x => x.TotalWin),
+                                    TotalJackpot = item.Sum(x => x.TotalJackpot),
+                                    TotalNetWin = item.Sum(x => x.TotalNetWin),
+                                    BusinessLine = "Table",
+                                    BusinessLineId = item.FirstOrDefault().BusinessLineId,
+                                    Visit = 1,
+                                    ClientTotalPoints = item.FirstOrDefault().ClientTotalPoints,
+                                    Client = item.FirstOrDefault().Client,
+                                    Phone = item.FirstOrDefault().Phone,
+                                    Movil = item.FirstOrDefault().Movil,
+                                    Email = item.FirstOrDefault().Email,
+                                    DateAdmission = item.FirstOrDefault().DateAdmission,
+                                    DateLastVisit = item.FirstOrDefault().DateLastVisit,
+                                    TypeClient = item.FirstOrDefault().TypeClient,
+                                    CodTypeClient = item.FirstOrDefault().CodTypeClient,
+                                    Color = item.FirstOrDefault().Color
+                                }).OrderByDescending(o => o.DateBilling).ToList();
                         listClientsCategory.AddRange(
-                            from mcs in tableClientSessions
-                            group new { mcs } by new
-                            {
-                                mcs.ClientTotalPoints,
-                                mcs.IdClient,
-                                mcs.Client,
-                                mcs.Phone,
-                                mcs.Movil,
-                                mcs.Email,
-                                mcs.DateAdmission,
-                                mcs.DateLastVisit,
-                                mcs.TypeClient,
-                                mcs.CodTypeClient,
-                                mcs.Color,
-                                mcs.DateBilling,
-                                mcs.BusinessLineId
-                            } into groupClients
-                            select new ClientsCategoryModel
-                            {
-                                IdClient = groupClients.Key.IdClient,
-                                Client = groupClients.Key.Client,
-                                Phone = groupClients.Key.Phone,
-                                Movil = groupClients.Key.Movil,
-                                Email = groupClients.Key.Email,
-                                DateBilling = groupClients.Key.DateBilling,
-                                DateAdmission = groupClients.Key.DateAdmission,
-                                DateLastVisit = groupClients.Key.DateLastVisit,
-                                CodTypeClient = groupClients.Key.CodTypeClient,
-                                TypeClient = groupClients.Key.TypeClient,
-                                TotalTimeSesion = groupClients.Sum(x => x.mcs.TotalTimeSesion),
-                                TotalBet = groupClients.Sum(x => x.mcs.TotalBet),
-                                TotalPoints = groupClients.Sum(x => x.mcs.TotalPoints),
-                                TotalWin = groupClients.Sum(x => x.mcs.TotalWin),
-                                TotalJackpot = groupClients.Sum(x => x.mcs.TotalJackpot),
-                                TotalNetWin = groupClients.Sum(x => x.mcs.TotalNetWin),
-                                Color = groupClients.Key.Color,
-                                BusinessLine = "Table",
-                                BusinessLineId = groupClients.Key.BusinessLineId,
-                                ClientFidelPoints = groupClients.Key.ClientTotalPoints,
-                                Visits = groupClients.Sum(x => x.mcs.Visit)
-                            }
-                        );
+                                     (
+                                      from mcs in tableClientSessions
+                                      group new { mcs } by new
+                                      {
+                                          ClientTotalPoints = mcs.ClientTotalPoints,
+                                          IdClient = mcs.IdClient,
+                                          Client = mcs.Client,
+                                          Phone = mcs.Phone,
+                                          Movil = mcs.Movil,
+                                          Email = mcs.Email,
+                                          DateAdmission = mcs.DateAdmission,
+                                          DateLastVisit = mcs.DateLastVisit,
+                                          TypeClient = mcs.TypeClient,
+                                          CodTypeClient = mcs.CodTypeClient,
+                                          Color = mcs.Color,
+                                          mcs.DateBilling,
+                                          mcs.BusinessLineId
+                                      }
+                                      into groupClients
+                                      select new ClientsCategoryModel
+                                      {
+                                          IdClient = groupClients.Key.IdClient,
+                                          Client = groupClients.Key.Client,
+                                          Phone = groupClients.Key.Phone,
+                                          Movil = groupClients.Key.Movil,
+                                          Email = groupClients.Key.Email,
+                                          DateBilling = groupClients.Key.DateBilling,
+                                          DateAdmission = groupClients.Key.DateAdmission,
+                                          DateLastVisit = groupClients.Key.DateLastVisit,
+                                          CodTypeClient = groupClients.Key.CodTypeClient,
+                                          TypeClient = groupClients.Key.TypeClient,
+                                          TotalTimeSesion = groupClients.Sum(x => x.mcs.TotalTimeSesion),
+                                          TotalBet = groupClients.Sum(x => x.mcs.TotalBet),
+                                          TotalPoints = groupClients.Sum(x => x.mcs.TotalPoints),
+                                          TotalWin = groupClients.Sum(x => x.mcs.TotalWin),
+                                          TotalJackpot = groupClients.Sum(x => x.mcs.TotalJackpot),
+                                          TotalNetWin = groupClients.Sum(x => x.mcs.TotalNetWin),
+                                          Color = groupClients.Key.Color,
+                                          BusinessLine = "Table",
+                                          BusinessLineId = groupClients.Key.BusinessLineId,
+                                          ClientFidelPoints = groupClients.Key.ClientTotalPoints,
+                                          Visits = groupClients.Sum(x => x.mcs.Visit)
+                                      }
+                                     )
+                                  );
+                    }
                     listClientsCategoryReturn = listClientsCategory
                 .Where(lcc => lcc.DateBilling >= startDate && lcc.DateBilling <= endDate)
                 .GroupBy(group => new
