@@ -163,8 +163,7 @@ namespace PLAYTRAK.ReportesFidelizacion.Models
 
                     List<ClientsCategoryModel> listClientsCategory = new List<ClientsCategoryModel>();
                     List<ClientsCategoryModel> listClientsCategoryReturn;
-                    if (listCodTypeCredit?.Contains("S") ?? true)
-                    {
+                  
                         var machineClientSessions = (
                             from fcsm in XPOFunction.XPQueryCatched<FIDEL_ClienteSesionMaquina>(uow, Logger.Logger.GetLog4netGlobal())
                             join fcd in XPOFunction.XPQueryCatched<FIDEL_CLIENTE_Datos>(uow, Logger.Logger.GetLog4netGlobal()) on fcsm.IDCliente.IDCliente equals fcd.IDCliente
@@ -280,10 +279,8 @@ namespace PLAYTRAK.ReportesFidelizacion.Models
                                 Visits = groupClients.Sum(x => x.mcs.Visit)
                             }
                         );
-                    }
 
-                    if (listCodTypeCredit == null || listCodTypeCredit.Contains("M"))
-                    {
+                 
                         var tableClientSessions = (
                             from fcsm in XPOFunction.XPQueryCatched<FIDEL_ClienteSesionMesa>(uow, Logger.Logger.GetLog4netGlobal())
                             join fcd in XPOFunction.XPQueryCatched<FIDEL_CLIENTE_Datos>(uow, Logger.Logger.GetLog4netGlobal()) on fcsm.IDCliente.IDCliente equals fcd.IDCliente
@@ -399,7 +396,6 @@ namespace PLAYTRAK.ReportesFidelizacion.Models
                                 Visits = groupClients.Sum(x => x.mcs.Visit)
                             }
                         );
-                    }
                     listClientsCategoryReturn = listClientsCategory
                 .Where(lcc => lcc.DateBilling >= startDate && lcc.DateBilling <= endDate)
                 .GroupBy(group => new
