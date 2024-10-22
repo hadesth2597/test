@@ -163,7 +163,7 @@ namespace PLAYTRAK.ReportesFidelizacion.Models
 
                     List<ClientsCategoryModel> listClientsCategory = new List<ClientsCategoryModel>();
                     List<ClientsCategoryModel> listClientsCategoryReturn;
-                    if (listCodTypeCredit?.Contains("M") != false)
+                    if (listCodTypeCredit?.Contains("S") ?? true)
                     {
                         var machineClientSessions = (
                             from fcsm in XPOFunction.XPQueryCatched<FIDEL_ClienteSesionMaquina>(uow, Logger.Logger.GetLog4netGlobal())
